@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+        <style>
+            body {
+                margin: 0;
+            }
+            canvas {
+                display: block;
+                width: 100vw;
+                height: 100vh;
+            }
+            .text {
+                position: absolute;
+                top: 0;
+                left: 10px;
+                color: white;
+                font-family: Arial, Helvetica, sans-serif;
+                white-space: pre-line;
+            }
+        </style>
+
+        <title>Marching Cubes</title>
+    </head>
+    <body>
+        <canvas id="canvas"></canvas>
+
+        <div class="text">
+            Click and drag to orbit
+            Scroll to zoom
+            Right Click drag to pan
+        </div>
+        <script src="lib/three.min.js"></script>
+        <script src="lib/orbit-controls.js"></script>
+        <!-- <script src="lib/OpenSimplexNoise.js"></script> -->
+        <!-- <script src="tables.js"></script> -->
+        <script src="main.js"></script>
+    </body>
+</html>
