@@ -1,4 +1,4 @@
-const RAD = 4;
+const RAD = 8;
 const ISO_LEVEL = 0;
 
 const WIDTH = 2 * RAD;
@@ -11,19 +11,19 @@ var renderer;
 var canvas;
 
 class MarchingCubes {
-    constructor(width, height, depth, sampleSize=1) {
-        this.xMax = Math.floor(width / 2 * sampleSize);
-        this.yMax = Math.floor(height / 2 * sampleSize);
-        this.zMax = Math.floor(depth / 2 * sampleSize);
+    constructor(width, height, depth, sampleSize = 1) {
+        this.xMax = Math.floor(width / (2 * sampleSize));
+        this.yMax = Math.floor(height / (2 * sampleSize));
+        this.zMax = Math.floor(depth / (2 * sampleSize));
         this.sampleSize = sampleSize;
 
         this.fieldBuffer = generateField(sampleSize, this.xMax, this.yMax, this.zMax);
 
         // this.indices = new Uint32Array(width * height * depth * 12);
         this.vertices = new Float32Array(this.xMax * this.yMax * this.zMax * 8 * 12 * 3);
-        
+
         this.edges = [];
-        for (let i =0; i < 12; i++) {
+        for (let i = 0; i < 12; i++) {
             this.edges.push(new Float32Array(3));
         }
     }
@@ -31,6 +31,8 @@ class MarchingCubes {
     generateMesh(geometry, surfaceLevel) {
         let fI, fJ, fK;
         let x, y, z;
+
+        let vIdx = 0;
 
         for (let i = -this.xMax; i < this.xMax; i++) {
             fI = i + this.xMax;
@@ -106,11 +108,26 @@ class MarchingCubes {
                         // const mu = (surfaceLevel - e3) / (e7 - e3);
                         this.#setFloatArray(this.edges[11], x, y + mu, z + this.sampleSize);
                     }
-                    
-                    
+
+                    const triLen = triangulationTable[cubeIndex];
+                    for (let i = 0; i < triLen.length; i++) {
+                        if (triLen[i] === -1) {
+                            break;
+                        }
+                        const e = this.edges[triLen[i]];
+                        this.vertices[vIdx] = e[0];
+                        this.vertices[vIdx + 1] = e[1];
+                        this.vertices[vIdx + 2] = e[2];
+                        // indices[idxCounter] = idxCounter;
+                        // idxCounter++;
+                        vIdx += 3;
+                    }
                 }
             }
         }
+
+        geometry.setAttribute('position', new THREE.BufferAttribute(this.vertices.slice(0, vIdx), 3));
+        geometry.computeVertexNormals();
     }
 
     #getCubeIndex(isoLevel, a, b, c, d, e, f, g, h) {
@@ -135,30 +152,6 @@ class MarchingCubes {
     }
 }
 
-
-function generateCube(geometry, material, position) {
-    let cube = new THREE.Mesh(geometry, material);
-    // set scale
-    cube.scale.x = 0.2;
-    cube.scale.y = 0.2;
-    cube.scale.z = 0.2;
-
-    // set position
-    cube.position.x = position.x;
-    cube.position.y = position.y;
-    cube.position.z = position.z;
-
-    return cube;
-}
-
-function onWindowResize() {
-    camera.aspect = canvas.clientWidth / canvas.clientHeight;
-    camera.updateProjectionMatrix();
-
-    renderer.setSize(canvas.clientWidth, canvas.clientHeight);
-    render();
-}
-
 function fieldFunction(x, y, z) {
     return Math.sqrt(x * x + y * y + z * z) - RAD
 }
@@ -181,7 +174,6 @@ function generateField(sampleSize, xVal, yVal, zVal) {
     return field;
 }
 
-
 function addTerrainMesh() {
     const sampleSize = 1;
 
@@ -193,6 +185,14 @@ function addTerrainMesh() {
 
     const mesh = new THREE.Mesh(terrainGeometry, whiteMaterial);
     scene.add(mesh);
+}
+
+function onWindowResize() {
+    camera.aspect = canvas.clientWidth / canvas.clientHeight;
+    camera.updateProjectionMatrix();
+
+    renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+    render();
 }
 
 function setup() {
@@ -207,8 +207,8 @@ function setup() {
     addTerrainMesh();
 
     // add lights
-    const dLight = new THREE.DirectionalLight(0xFFFFFF, 1);
-    dLight.position.set(-1, 2, 10);
+    const dLight = new THREE.DirectionalLight(0xFFFFFF, 0.5);
+    dLight.position.set(-5, 2, 10);
     scene.add(dLight);
 
     let ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
