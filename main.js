@@ -44,69 +44,68 @@ class MarchingCubes {
                     fK = k + this.zMax;
                     z = k * this.sampleSize;
 
-                    let cubeIndex = this.#getCubeIndex(
-                        surfaceLevel,
-                        this.fieldBuffer[fI][fJ][fK],
-                        this.fieldBuffer[fI + 1][fJ][fK],
-                        this.fieldBuffer[fI + 1][fJ][fK + 1],
-                        this.fieldBuffer[fI][fJ][fK + 1],
-                        this.fieldBuffer[fI][fJ + 1][fK],
-                        this.fieldBuffer[fI + 1][fJ + 1][fK],
-                        this.fieldBuffer[fI + 1][fJ + 1][fK + 1],
-                        this.fieldBuffer[fI][fJ + 1][fK + 1],
-                    );
+                    const v0 = this.fieldBuffer[fI][fJ][fK];
+                    const v1 = this.fieldBuffer[fI + 1][fJ][fK];
+                    const v2 = this.fieldBuffer[fI + 1][fJ][fK + 1];
+                    const v3 = this.fieldBuffer[fI][fJ][fK + 1];
+                    const v4 = this.fieldBuffer[fI][fJ + 1][fK];
+                    const v5 = this.fieldBuffer[fI + 1][fJ + 1][fK];
+                    const v6 = this.fieldBuffer[fI + 1][fJ + 1][fK + 1];
+                    const v7 = this.fieldBuffer[fI][fJ + 1][fK + 1];
+
+                    let cubeIndex = this.#getCubeIndex(surfaceLevel, v0, v1, v2, v3, v4, v5, v6, v7);
                     let edgeIndex = edgeTable[cubeIndex];
                     if (edgeIndex == 0) {
                         continue;
                     }
-                    const mu = this.sampleSize / 2;
+                    let mu = this.sampleSize / 2;
                     if (edgeIndex & 1) {
-                        // const mu = (surfaceLevel - e0) / (e1 - e0);
-                        this.#setFloatArray(this.edges[0], x + mu, y, z);
+                        mu = (surfaceLevel - v0) / (v1 - v0);
+                        this.#setFloatArray(this.edges[0], this.#lerp(x, x + this.sampleSize, mu), y, z);
                     }
                     if (edgeIndex & 2) {
-                        // const mu = (surfaceLevel - e1) / (e2 - e1);
-                        this.#setFloatArray(this.edges[1], x + this.sampleSize, y, z + mu);
+                        mu = (surfaceLevel - v1) / (v2 - v1);
+                        this.#setFloatArray(this.edges[1], x + this.sampleSize, y, this.#lerp(z, z + this.sampleSize, mu));
                     }
                     if (edgeIndex & 4) {
-                        // const mu = (surfaceLevel - e3) / (e2 - e3);
-                        this.#setFloatArray(this.edges[2], x + mu, y, z + this.sampleSize);
+                        mu = (surfaceLevel - v3) / (v2 - v3);
+                        this.#setFloatArray(this.edges[2], this.#lerp(x, x + this.sampleSize, mu), y, z + this.sampleSize);
                     }
                     if (edgeIndex & 8) {
-                        // const mu = (surfaceLevel - e0) / (e3 - e0);
-                        this.#setFloatArray(this.edges[3], x, y, z + mu);
+                        mu = (surfaceLevel - v0) / (v3 - v0);
+                        this.#setFloatArray(this.edges[3], x, y, this.#lerp(z, z + this.sampleSize, mu));
                     }
                     if (edgeIndex & 16) {
-                        // const mu = (surfaceLevel - e4) / (e5 - e4);
-                        this.#setFloatArray(this.edges[4], x + mu, y + this.sampleSize, z);
+                        mu = (surfaceLevel - v4) / (v5 - v4);
+                        this.#setFloatArray(this.edges[4], this.#lerp(x, x + this.sampleSize, mu), y + this.sampleSize, z);
                     }
                     if (edgeIndex & 32) {
-                        // const mu = (surfaceLevel - e5) / (e6 - e5);
-                        this.#setFloatArray(this.edges[5], x + this.sampleSize, y + this.sampleSize, z + mu);
+                        mu = (surfaceLevel - v5) / (v6 - v5);
+                        this.#setFloatArray(this.edges[5], x + this.sampleSize, y + this.sampleSize, this.#lerp(z, z + this.sampleSize, mu));
                     }
                     if (edgeIndex & 64) {
-                        // const mu = (surfaceLevel - e7) / (e6 - e7);
-                        this.#setFloatArray(this.edges[6], x + mu, y + this.sampleSize, z + this.sampleSize);
+                        mu = (surfaceLevel - v7) / (v6 - v7);
+                        this.#setFloatArray(this.edges[6], this.#lerp(x, x + this.sampleSize, mu), y + this.sampleSize, z + this.sampleSize);
                     }
                     if (edgeIndex & 128) {
-                        // const mu = (surfaceLevel - e4) / (e7 - e4);
-                        this.#setFloatArray(this.edges[7], x, y + this.sampleSize, z + mu);
+                        mu = (surfaceLevel - v4) / (v7 - v4);
+                        this.#setFloatArray(this.edges[7], x, y + this.sampleSize, this.#lerp(z, z + this.sampleSize, mu));
                     }
                     if (edgeIndex & 256) {
-                        // const mu = (surfaceLevel - e0) / (e4 - e0);
-                        this.#setFloatArray(this.edges[8], x, y + mu, z);
+                        mu = (surfaceLevel - v0) / (v4 - v0);
+                        this.#setFloatArray(this.edges[8], x, this.#lerp(y, y + this.sampleSize, mu), z);
                     }
                     if (edgeIndex & 512) {
-                        // const mu = (surfaceLevel - e1) / (e5 - e1);
-                        this.#setFloatArray(this.edges[9], x + this.sampleSize, y + mu, z);
+                        mu = (surfaceLevel - v1) / (v5 - v1);
+                        this.#setFloatArray(this.edges[9], x + this.sampleSize, this.#lerp(y, y + this.sampleSize, mu), z);
                     }
                     if (edgeIndex & 1024) {
-                        // const mu = (surfaceLevel - e2) / (e6 - e2);
-                        this.#setFloatArray(this.edges[10], x + this.sampleSize, y + mu, z + this.sampleSize);
+                        mu = (surfaceLevel - v2) / (v6 - v2);
+                        this.#setFloatArray(this.edges[10], x + this.sampleSize, this.#lerp(y, y + this.sampleSize, mu), z + this.sampleSize);
                     }
                     if (edgeIndex & 2048) {
-                        // const mu = (surfaceLevel - e3) / (e7 - e3);
-                        this.#setFloatArray(this.edges[11], x, y + mu, z + this.sampleSize);
+                        mu = (surfaceLevel - v3) / (v7 - v3);
+                        this.#setFloatArray(this.edges[11], x, this.#lerp(y, y + this.sampleSize, mu), z + this.sampleSize);
                     }
 
                     const triLen = triangulationTable[cubeIndex];
@@ -149,6 +148,10 @@ class MarchingCubes {
         arr[0] = a;
         arr[1] = b;
         arr[2] = c;
+    }
+
+    #lerp(start, end, amt) {
+        return (1 - amt) * start + amt * end;
     }
 }
 
