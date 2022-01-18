@@ -1,9 +1,8 @@
-const RAD = 8;
 const ISO_LEVEL = 0;
 
-const WIDTH = 2 * RAD;
-const HEIGHT = 2 * RAD;
-const DEPTH = 2 * RAD;
+const WIDTH = 32;
+const HEIGHT = 32;
+const DEPTH = 32;
 
 var scene;
 var camera;
@@ -17,15 +16,25 @@ class MarchingCubes {
         this.zMax = Math.floor(depth / (2 * sampleSize));
         this.sampleSize = sampleSize;
 
-        this.fieldBuffer = generateField(sampleSize, this.xMax, this.yMax, this.zMax);
+        this.xMax2 = 2 * this.xMax;
+        this.yMax2 = 2 * this.yMax;
+        this.zMax2 = 2 * this.zMax;
 
-        // this.indices = new Uint32Array(width * height * depth * 12);
-        this.vertices = new Float32Array(this.xMax * this.yMax * this.zMax * 8 * 12 * 3);
+        this.fieldBuffer = new Float32Array((this.xMax+1) * (this.yMax + 1) * (this.zMax + 1) * 8);
+        this.vertices = new Float32Array(this.xMax2 * this.yMax2 * this.zMax2 * 12 * 3);
 
         this.edges = [];
         for (let i = 0; i < 12; i++) {
             this.edges.push(new Float32Array(3));
         }
+    }
+
+    setField(i, j, k, amt) {
+        this.fieldBuffer[i * this.xMax2 * this.zMax2 + k * this.zMax2 + j] = amt;
+    }
+
+    getField(i, j, k) {
+        return this.fieldBuffer[i * this.xMax2 * this.zMax2 + k * this.zMax2 + j];
     }
 
     generateMesh(geometry, surfaceLevel) {
@@ -44,14 +53,14 @@ class MarchingCubes {
                     fK = k + this.zMax;
                     z = k * this.sampleSize;
 
-                    const v0 = this.fieldBuffer[fI][fJ][fK];
-                    const v1 = this.fieldBuffer[fI + 1][fJ][fK];
-                    const v2 = this.fieldBuffer[fI + 1][fJ][fK + 1];
-                    const v3 = this.fieldBuffer[fI][fJ][fK + 1];
-                    const v4 = this.fieldBuffer[fI][fJ + 1][fK];
-                    const v5 = this.fieldBuffer[fI + 1][fJ + 1][fK];
-                    const v6 = this.fieldBuffer[fI + 1][fJ + 1][fK + 1];
-                    const v7 = this.fieldBuffer[fI][fJ + 1][fK + 1];
+                    const v0 = this.getField(fI, fJ, fK);
+                    const v1 = this.getField(fI + 1, fJ, fK);
+                    const v2 = this.getField(fI + 1, fJ, fK + 1);
+                    const v3 = this.getField(fI, fJ, fK + 1);
+                    const v4 = this.getField(fI, fJ + 1, fK);
+                    const v5 = this.getField(fI + 1, fJ + 1, fK);
+                    const v6 = this.getField(fI + 1, fJ + 1, fK + 1);
+                    const v7 = this.getField(fI, fJ + 1, fK + 1)
 
                     let cubeIndex = this.#getCubeIndex(surfaceLevel, v0, v1, v2, v3, v4, v5, v6, v7);
                     let edgeIndex = edgeTable[cubeIndex];
@@ -156,25 +165,22 @@ class MarchingCubes {
 }
 
 function fieldFunction(x, y, z) {
-    return Math.sqrt(x * x + y * y + z * z) - RAD
+    return Math.sqrt(x * x + y * y + z * z) - 16;
 }
 
-function generateField(sampleSize, xVal, yVal, zVal) {
-    let field = [];
+function generateTerrainField(ms) {
+    let sampleSize = ms.sampleSize;
 
-    for (let i = -xVal; i < xVal + 1; i++) {
+    for (let i = -ms.xMax; i < ms.xMax + 1; i++) {
         let x = i * sampleSize;
-        field[i + xVal] = [];
-        for (let j = -yVal; j < yVal + 1; j++) {
+        for (let j = -ms.yMax; j < ms.yMax + 1; j++) {
             let y = j * sampleSize;
-            field[i + xVal][j + yVal] = [];
-            for (let k = -zVal; k < zVal + 1; k++) {
+            for (let k = -ms.zMax; k < ms.zMax + 1; k++) {
                 let z = k * sampleSize;
-                field[i + xVal][j + yVal][k + zVal] = fieldFunction(x, y, z);
+                ms.setField(i + ms.xMax, j + ms.yMax, k + ms.zMax, fieldFunction(x, y, z));
             }
         }
     }
-    return field;
 }
 
 function addTerrainMesh() {
@@ -184,6 +190,8 @@ function addTerrainMesh() {
     let terrainGeometry = new THREE.BufferGeometry();
 
     let marchingCubes = new MarchingCubes(WIDTH, HEIGHT, DEPTH, sampleSize);
+    generateTerrainField(marchingCubes);
+
     marchingCubes.generateMesh(terrainGeometry, ISO_LEVEL);
 
     const mesh = new THREE.Mesh(terrainGeometry, whiteMaterial);
@@ -194,7 +202,8 @@ function onWindowResize() {
     camera.aspect = canvas.clientWidth / canvas.clientHeight;
     camera.updateProjectionMatrix();
 
-    renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+    const pixelRatio = window.devicePixelRatio;
+    renderer.setSize(canvas.clientWidth * pixelRatio, canvas.clientHeight * pixelRatio, false);
     render();
 }
 
