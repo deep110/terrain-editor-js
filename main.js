@@ -10,21 +10,56 @@ var renderer;
 var canvas;
 
 
-class TerrainNoiseField {
-    constructor() {
+class Terrain {
+    constructor(width, height, depth, sampleSize) {
+        this.xMax = Math.floor(width / (2 * sampleSize));
+        this.yMax = Math.floor(height / (2 * sampleSize));
+        this.zMax = Math.floor(depth / (2 * sampleSize));
+        this.sampleSize = sampleSize;
+
+        this.xMax2 = 2 * this.xMax;
+        this.yMax2 = 2 * this.yMax;
+        this.zMax2 = 2 * this.zMax;
+        this.fieldBuffer = new Float32Array((this.xMax+1) * (this.yMax + 1) * (this.zMax + 1) * 8);
+
+        // noise values
         this.seed = 6;
         this.numOctaves = 4;
         this.simplex = new SimplexNoise();
+
+        // graphics
+        this.geometry = new THREE.BufferGeometry();
+        this.material = new THREE.MeshStandardMaterial({ color: 0xffffff, side: THREE.DoubleSide });
+        this.mesh = new THREE.Mesh(this.geometry, this.material);
+        this.marchingCubes = new MarchingCubes(this.xMax, this.yMax, this.zMax, sampleSize);
+
+        // generate mesh geometry
+        this.generateHeightField();
+        this.marchingCubes.generateMesh(this.geometry, ISO_LEVEL, this);
     }
 
-    generate(xMax, yMax, zMax, sampleSize, ms) {
-        for (let i = -xMax; i < xMax + 1; i++) {
-            let x = i * sampleSize;
-            for (let j = -yMax; j < yMax + 1; j++) {
-                let y = j * sampleSize;
-                for (let k = -zMax; k < zMax + 1; k++) {
-                    let z = k * sampleSize;
-                    ms.setField(i + xMax, j + yMax, k + zMax, this.#sphereField(x, y, z));
+    setField(i, j, k, amt) {
+        this.fieldBuffer[i * this.xMax2 * this.zMax2 + k * this.zMax2 + j] = amt;
+    }
+
+    getField(i, j, k) {
+        return this.fieldBuffer[i * this.xMax2 * this.zMax2 + k * this.zMax2 + j];
+    }
+
+    getMesh() {
+        return this.mesh;
+    }
+
+    regenerateMesh() {}
+
+    generateHeightField() {
+        for (let i = -this.xMax; i < this.xMax + 1; i++) {
+            let x = i * this.sampleSize;
+            for (let j = -this.yMax; j < this.yMax + 1; j++) {
+                let y = j * this.sampleSize;
+                for (let k = -this.zMax; k < this.zMax + 1; k++) {
+                    let z = k * this.sampleSize;
+                    this.setField(i + this.xMax, j + this.yMax, k + this.zMax, this.#sphereField(x, y, z));
                 }
             }
         }
@@ -37,31 +72,31 @@ class TerrainNoiseField {
 
 function addTerrain() {
     const sampleSize = 1;
+    let terrain = new Terrain(WIDTH, HEIGHT, DEPTH, sampleSize);
 
-    const whiteMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff, side: THREE.DoubleSide });
-    let terrainGeometry = new THREE.BufferGeometry();
-    let terrainNoiseField = new TerrainNoiseField();
-
-    let marchingCubes = new MarchingCubes(WIDTH, HEIGHT, DEPTH, sampleSize);
-    terrainNoiseField.generate(marchingCubes.xMax, marchingCubes.yMax, marchingCubes.zMax, sampleSize, marchingCubes);
-
-    marchingCubes.generateMesh(terrainGeometry, ISO_LEVEL);
-
-    const mesh = new THREE.Mesh(terrainGeometry, whiteMaterial);
-    scene.add(mesh);
+    scene.add(terrain.getMesh());
 
     const boxGeo = new THREE.BoxGeometry();
     const material = new THREE.MeshPhongMaterial({ color: 0xff0000 });
+    const material2 = new THREE.MeshPhongMaterial({ color: 0x00ff00 });
+    const material3 = new THREE.MeshPhongMaterial({ color: 0x0000ff });
     
-    temp(boxGeo, material, 20, 0, 0);
-    temp(boxGeo, material, 0, 0, 15);
-    temp(boxGeo, material, 0, 40, 0);
+    temp(boxGeo, material, 4, 0, 0, 1);
+    temp(boxGeo, material2, 0, 4, 0, 2);
+    temp(boxGeo, material3, 0, 0, 4, 3);
 
-    function temp(geo, mat, x, y, z) {
+    function temp(geo, mat, x, y, z, s) {
+        mat.depthTest = false;
         const c0 = new THREE.Mesh(geo, mat);
         c0.position.x = x;
         c0.position.y = y;
         c0.position.z = z;
+
+        switch (s) {
+            case 1: c0.scale.x = 6; break;
+            case 2: c0.scale.y = 6; break;
+            case 3: c0.scale.z = 6; break;
+        }
     
         scene.add(c0);
     }

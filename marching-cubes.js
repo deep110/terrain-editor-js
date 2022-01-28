@@ -293,18 +293,13 @@ const edgeTable = [
 ];
 
 class MarchingCubes {
-    constructor(width, height, depth, sampleSize = 1) {
-        this.xMax = Math.floor(width / (2 * sampleSize));
-        this.yMax = Math.floor(height / (2 * sampleSize));
-        this.zMax = Math.floor(depth / (2 * sampleSize));
+    constructor(xMax, yMax, zMax, sampleSize = 1) {
+        this.xMax = xMax;
+        this.yMax = yMax;
+        this.zMax = zMax;
         this.sampleSize = sampleSize;
 
-        this.xMax2 = 2 * this.xMax;
-        this.yMax2 = 2 * this.yMax;
-        this.zMax2 = 2 * this.zMax;
-
-        this.fieldBuffer = new Float32Array((this.xMax+1) * (this.yMax + 1) * (this.zMax + 1) * 8);
-        this.vertices = new Float32Array(this.xMax2 * this.yMax2 * this.zMax2 * 12 * 3);
+        this.vertices = new Float32Array(this.xMax * this.yMax * this.zMax * 8 * 12 * 3);
 
         this.edges = [];
         for (let i = 0; i < 12; i++) {
@@ -312,15 +307,7 @@ class MarchingCubes {
         }
     }
 
-    setField(i, j, k, amt) {
-        this.fieldBuffer[i * this.xMax2 * this.zMax2 + k * this.zMax2 + j] = amt;
-    }
-
-    getField(i, j, k) {
-        return this.fieldBuffer[i * this.xMax2 * this.zMax2 + k * this.zMax2 + j];
-    }
-
-    generateMesh(geometry, surfaceLevel) {
+    generateMesh(geometry, surfaceLevel, terrain) {
         let fI, fJ, fK;
         let x, y, z;
 
@@ -336,14 +323,14 @@ class MarchingCubes {
                     fK = k + this.zMax;
                     z = k * this.sampleSize;
 
-                    const v0 = this.getField(fI, fJ, fK);
-                    const v1 = this.getField(fI + 1, fJ, fK);
-                    const v2 = this.getField(fI + 1, fJ, fK + 1);
-                    const v3 = this.getField(fI, fJ, fK + 1);
-                    const v4 = this.getField(fI, fJ + 1, fK);
-                    const v5 = this.getField(fI + 1, fJ + 1, fK);
-                    const v6 = this.getField(fI + 1, fJ + 1, fK + 1);
-                    const v7 = this.getField(fI, fJ + 1, fK + 1)
+                    const v0 = terrain.getField(fI, fJ, fK);
+                    const v1 = terrain.getField(fI + 1, fJ, fK);
+                    const v2 = terrain.getField(fI + 1, fJ, fK + 1);
+                    const v3 = terrain.getField(fI, fJ, fK + 1);
+                    const v4 = terrain.getField(fI, fJ + 1, fK);
+                    const v5 = terrain.getField(fI + 1, fJ + 1, fK);
+                    const v6 = terrain.getField(fI + 1, fJ + 1, fK + 1);
+                    const v7 = terrain.getField(fI, fJ + 1, fK + 1)
 
                     let cubeIndex = this.#getCubeIndex(surfaceLevel, v0, v1, v2, v3, v4, v5, v6, v7);
                     let edgeIndex = edgeTable[cubeIndex];
