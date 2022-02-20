@@ -316,7 +316,7 @@ class MarchingCubes {
         for (let i = -this.xMax; i < this.xMax; i++) {
             fI = i + this.xMax;
             x = i * this.sampleSize;
-            for (let j = -this.yMax; j < this.yMax; j++) {
+            for (let j = -this.yMax+1; j < this.yMax-1; j++) {
                 fJ = j + this.yMax;
                 y = j * this.sampleSize;
                 for (let k = -this.zMax; k < this.zMax; k++) {

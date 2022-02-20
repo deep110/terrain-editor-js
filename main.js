@@ -1,6 +1,6 @@
 const ISO_LEVEL = 0;
 
-const WIDTH = 16;
+const WIDTH = 60;
 const HEIGHT = WIDTH;
 const DEPTH = WIDTH;
 
@@ -20,16 +20,22 @@ class Terrain {
         this.xMax2 = 2 * this.xMax;
         this.yMax2 = 2 * this.yMax;
         this.zMax2 = 2 * this.zMax;
-        this.fieldBuffer = new Float32Array((this.xMax+1) * (this.yMax + 1) * (this.zMax + 1) * 8);
+        this.fieldBuffer = new Float32Array((this.xMax + 1) * (this.yMax + 1) * (this.zMax + 1) * 8);
 
         // noise values
-        this.seed = 6;
         this.numOctaves = 4;
+        this.lacunarity = 2;
+        this.persistence = 0.5;
+        this.noiseScale = 2;
+        this.noiseWeight = 7;
+        this.floorOffset = 5;
+        this.weightMultiplier = 3.6;
         this.simplex = new SimplexNoise();
 
         // graphics
         this.geometry = new THREE.BufferGeometry();
-        this.material = new THREE.MeshStandardMaterial({ color: 0xffffff, side: THREE.DoubleSide });
+        // this.material = new THREE.MeshStandardMaterial({ color: 0xffffff, side: THREE.DoubleSide });
+        this.material = new THREE.MeshStandardMaterial({ color: 0xffffff });
         this.mesh = new THREE.Mesh(this.geometry, this.material);
         this.marchingCubes = new MarchingCubes(this.xMax, this.yMax, this.zMax, sampleSize);
 
@@ -50,7 +56,9 @@ class Terrain {
         return this.mesh;
     }
 
-    regenerateMesh() {}
+    regenerateMesh() {
+        this.marchingCubes.generateMesh(this.geometry, ISO_LEVEL, this);
+    }
 
     generateHeightField() {
         for (let i = -this.xMax; i < this.xMax + 1; i++) {
@@ -59,14 +67,36 @@ class Terrain {
                 let y = j * this.sampleSize;
                 for (let k = -this.zMax; k < this.zMax + 1; k++) {
                     let z = k * this.sampleSize;
-                    this.setField(i + this.xMax, j + this.yMax, k + this.zMax, this.#sphereField(x, y, z));
+                    this.setField(i + this.xMax, j + this.yMax, k + this.zMax, this.#heightValue(x, y, z));
                 }
             }
         }
     }
 
-    #sphereField(x, y, z) {
-        return Math.sqrt(x * x + y * y + z * z) - WIDTH/2;
+    #heightValue(x, y, z) {
+        let offsetNoise = 1;
+        let noise = 0;
+
+        let frequency = this.noiseScale / 100;
+        let amplitude = 1;
+        let weight = 1;
+        for (var j = 0; j < this.numOctaves; j++) {
+            let n = this.simplex.noise3D(
+                (x + offsetNoise) * frequency,
+                (y + offsetNoise) * frequency,
+                (z + offsetNoise) * frequency,
+            );
+            let v = 1 - Math.abs(n);
+            v = v * v * weight;
+            weight = Math.max(Math.min(v * this.weightMultiplier, 1), 0);
+            noise += v * amplitude;
+            amplitude *= this.persistence;
+            frequency *= this.lacunarity;
+        }
+
+        let finalVal = -(y + this.floorOffset) + noise * this.noiseWeight;
+
+        return -finalVal;
     }
 }
 
@@ -80,10 +110,11 @@ function addTerrain() {
     const material = new THREE.MeshPhongMaterial({ color: 0xff0000 });
     const material2 = new THREE.MeshPhongMaterial({ color: 0x00ff00 });
     const material3 = new THREE.MeshPhongMaterial({ color: 0x0000ff });
-    
-    temp(boxGeo, material, 4, 0, 0, 1);
-    temp(boxGeo, material2, 0, 4, 0, 2);
-    temp(boxGeo, material3, 0, 0, 4, 3);
+
+    const st = 4;
+    temp(boxGeo, material, st, 0, 0, 1);
+    temp(boxGeo, material2, 0, st, 0, 2);
+    temp(boxGeo, material3, 0, 0, st, 3);
 
     function temp(geo, mat, x, y, z, s) {
         mat.depthTest = false;
@@ -97,7 +128,7 @@ function addTerrain() {
             case 2: c0.scale.y = 6; break;
             case 3: c0.scale.z = 6; break;
         }
-    
+
         scene.add(c0);
     }
 }
