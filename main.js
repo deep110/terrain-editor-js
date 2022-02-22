@@ -9,6 +9,7 @@ var camera;
 var renderer;
 var canvas;
 
+const raycaster = new THREE.Raycaster();
 
 class Terrain {
     constructor(width, height, depth, sampleSize) {
@@ -98,14 +99,13 @@ class Terrain {
 
         return -finalVal;
     }
+
+    #sphereDistance = (spherePos, point, radius) => {
+        return spherePos.distanceTo(point) - radius;
+    }
 }
 
-function addTerrain() {
-    const sampleSize = 1;
-    let terrain = new Terrain(WIDTH, HEIGHT, DEPTH, sampleSize);
-
-    scene.add(terrain.getMesh());
-
+function addAxis() {
     const boxGeo = new THREE.BoxGeometry();
     const material = new THREE.MeshPhongMaterial({ color: 0xff0000 });
     const material2 = new THREE.MeshPhongMaterial({ color: 0x00ff00 });
@@ -142,6 +142,18 @@ function onWindowResize() {
     render();
 }
 
+function updateBrushPosition(mousePosition, terrain, brush) {
+    raycaster.setFromCamera(mousePosition, camera);
+    const result = raycaster.intersectObject(terrain.getMesh());
+    if (result.length > 0) {
+        const point = result[0].point;
+        // mainScene.marchingcubes.makeShape(brushSize, brushColor, point, keys["r"] ? -1 : 1, getDistanceFunction());
+        // mainScene.marchingcubes.setMesh(mainScene.terrainMesh.geometry, 0);
+        brush.position.set(point.x, point.y, point.z);
+        render();
+    }
+}
+
 function setup() {
     canvas = document.getElementById("canvas");
     scene = new THREE.Scene();
@@ -151,26 +163,42 @@ function setup() {
     const pixelRatio = window.devicePixelRatio;
     renderer.setSize(canvas.clientWidth * pixelRatio, canvas.clientHeight * pixelRatio, false);
 
-    addTerrain();
+    // add terrain
+    const terrain = new Terrain(WIDTH, HEIGHT, DEPTH, 1);
+    scene.add(terrain.getMesh());
+
+    // add editing brush
+    const brushMat = new THREE.MeshPhongMaterial({ color: 0xffff00, transparent: true, opacity: 0.5 });
+    const brushGeo = new THREE.SphereGeometry(1.5, 16, 16);
+    const brush = new THREE.Mesh(brushGeo, brushMat);
+    scene.add(brush);
+
+    // TODO: remove later
+    addAxis();
 
     // add lights
     const dLight = new THREE.DirectionalLight(0xFFFFFF, 0.5);
     dLight.position.set(-5, 2, 10);
     scene.add(dLight);
 
-    let ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
+    let ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
     scene.add(ambientLight);
 
     scene.background = new THREE.Color("#3a3a3a");
-    camera.position.z = 15;
-    camera.position.x = 15;
-    camera.position.y = 15;
+    camera.position.set(15, 20, 20);
 
     controls = new THREE.OrbitControls(camera, canvas);
     controls.listenToKeyEvents(window);
     controls.addEventListener('change', render);
 
     window.addEventListener('resize', onWindowResize);
+
+    const mousePointer = new THREE.Vector2();
+    document.onmousemove = (e) => {
+        mousePointer.x = ( e.clientX / window.innerWidth ) * 2 - 1;
+        mousePointer.y = - ( e.clientY / window.innerHeight ) * 2 + 1;
+        updateBrushPosition(mousePointer, terrain, brush);
+    }
 }
 
 function render() {
