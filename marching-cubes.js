@@ -408,8 +408,8 @@ class MarchingCubes {
         geometry.computeVertexNormals();
 
         // tell three.js that mesh has been updated
-        // geometry.attributes.position.needsUpdate = true;
-        // geometry.attributes.normal.needsUpdate = true;
+        geometry.attributes.position.needsUpdate = true;
+        geometry.attributes.normal.needsUpdate = true;
     }
 
     #getCubeIndex(isoLevel, a, b, c, d, e, f, g, h) {

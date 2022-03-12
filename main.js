@@ -8,6 +8,7 @@ var scene;
 var camera;
 var renderer;
 var canvas;
+var whichKeyPress = "NONE"; // Shift, Z, NONE
 
 const raycaster = new THREE.Raycaster();
 
@@ -35,7 +36,6 @@ class Terrain {
 
         // graphics
         this.geometry = new THREE.BufferGeometry();
-        // this.material = new THREE.MeshStandardMaterial({ color: 0xffffff, side: THREE.DoubleSide });
         this.material = new THREE.MeshStandardMaterial({ color: 0xffffff });
         this.mesh = new THREE.Mesh(this.geometry, this.material);
         this.marchingCubes = new MarchingCubes(this.xMax, this.yMax, this.zMax, sampleSize);
@@ -55,6 +55,24 @@ class Terrain {
 
     getMesh() {
         return this.mesh;
+    }
+
+    makeShape(brushSize, point, multiplier) {
+        for (let x = -brushSize - 2; x <= brushSize + 2; x++) {
+            for (let y = -brushSize - 2; y <= brushSize + 2; y++) {
+                for (let z = -brushSize - 2; z <= brushSize + 2; z++) {
+                    let distance = this.#sphereDistance(point.clone(), new THREE.Vector3(point.x + x, point.y + y, point.z + z), brushSize);
+                    if (distance < 0) {
+                        let xi = Math.round(point.x + x) + this.xMax;
+                        let yi = Math.round(point.y + y) + this.yMax;
+                        let zi = Math.round(point.z + z) + this.zMax;
+
+                        this.setField(xi, yi, zi, this.getField(xi, yi, zi) - distance * multiplier);
+                    }
+                }
+            }
+        }
+        this.regenerateMesh();
     }
 
     regenerateMesh() {
@@ -147,8 +165,6 @@ function updateBrushPosition(mousePosition, terrain, brush) {
     const result = raycaster.intersectObject(terrain.getMesh());
     if (result.length > 0) {
         const point = result[0].point;
-        // mainScene.marchingcubes.makeShape(brushSize, brushColor, point, keys["r"] ? -1 : 1, getDistanceFunction());
-        // mainScene.marchingcubes.setMesh(mainScene.terrainMesh.geometry, 0);
         brush.position.set(point.x, point.y, point.z);
         render();
     }
@@ -173,8 +189,7 @@ function setup() {
     const brush = new THREE.Mesh(brushGeo, brushMat);
     scene.add(brush);
 
-    // TODO: remove later
-    addAxis();
+    // addAxis();
 
     // add lights
     const dLight = new THREE.DirectionalLight(0xFFFFFF, 0.5);
@@ -194,18 +209,45 @@ function setup() {
     window.addEventListener('resize', onWindowResize);
 
     const mousePointer = new THREE.Vector2();
-    document.onmousemove = (e) => {
+    canvas.onmousemove = (e) => {
         mousePointer.x = ( e.clientX / window.innerWidth ) * 2 - 1;
         mousePointer.y = - ( e.clientY / window.innerHeight ) * 2 + 1;
         updateBrushPosition(mousePointer, terrain, brush);
     }
+
+    canvas.onclick = (e) => {
+        let point = brush.position;
+
+        if (whichKeyPress === "Shift") {
+            // raise the terrain
+            terrain.makeShape(5, point, -1);
+            render();
+        } else if (whichKeyPress === "Z") {
+            // depress the terrain
+            terrain.makeShape(5, point, 1);
+            render();
+        }
+    }
+
+    document.addEventListener('keydown', (e) => {
+        const key = e.key;
+        if (key === "Shift") {
+            whichKeyPress = "Shift";
+            return;
+        }
+        if (key.toUpperCase() === "Z") {
+            whichKeyPress = "Z";
+            return;
+        }
+        whichKeyPress = "NONE";
+    });
+    document.addEventListener('keyup', () => {
+        whichKeyPress = "NONE";
+    });
 }
 
 function render() {
-    console.log("render called");
     renderer.render(scene, camera);
-
-    // requestAnimationFrame(render);
 }
 
 setup();
